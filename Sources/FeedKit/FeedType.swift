@@ -84,7 +84,7 @@ public extension FeedType {
 }
 
 /// The number of bytes to inspect when determining the feed type.
-private let inspectionPrefixLength = 128
+private let inspectionPrefixLength = 512
 
 // MARK: - FeedInitializable
 
