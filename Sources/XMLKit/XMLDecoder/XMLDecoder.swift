@@ -164,6 +164,44 @@ class _XMLDecoder: Decoder {
     }
   }
 
+  /// Decodes an `XMLNode` into a `Bool` value using lenient string matching.
+  /// - Parameters:
+  ///   - node: The XML node to decode.
+  ///   - type: The `Bool` type.
+  /// - Returns: A decoded `Bool` value.
+  /// - Throws: An error if the text is nil or not a recognized boolean string.
+  func decode(_ node: XMLNode, as type: Bool.Type) throws -> Bool {
+    guard let text = node.text, let value = text.toBool() else {
+      throw DecodingError.valueNotFound(type, .init(
+        codingPath: codingPath,
+        debugDescription: "Expected text but found nil"
+      ))
+    }
+    return value
+  }
+
+  /// Decodes a child `XMLNode` into a `Bool` value using lenient string matching.
+  /// - Parameters:
+  ///   - node: The parent XML node.
+  ///   - type: The `Bool` type.
+  ///   - key: The `CodingKey` identifying the child element to decode.
+  /// - Returns: A decoded `Bool` value.
+  /// - Throws: A `DecodingError.dataCorrupted` error if the child is missing,
+  ///   its text is nil, or the text is not a recognized boolean string.
+  func decode(_ node: XMLNode, as type: Bool.Type, for key: some CodingKey) throws -> Bool {
+    guard
+      let child = node.child(for: key.stringValue),
+      let text = child.text,
+      let value = text.toBool()
+    else {
+      throw DecodingError.dataCorrupted(.init(
+        codingPath: codingPath,
+        debugDescription: "Failed to decode \(type) value from key: \(key.stringValue)"
+      ))
+    }
+    return value
+  }
+
   /// Decodes an `XMLNode` into a `LosslessStringConvertible` type.
   /// - Parameters:
   ///   - element: The XML element to decode.
