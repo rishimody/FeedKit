@@ -37,6 +37,24 @@ public struct RSSFeedEnclosureAttributes: Codable, Equatable, Hashable, Sendable
     self.type = type
   }
 
+  public init(from decoder: any Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    url = try container.decodeIfPresent(String.self, forKey: .url)
+    type = try container.decodeIfPresent(String.self, forKey: .type)
+
+    // An unusable byte count must not prevent an otherwise usable enclosure
+    // (or the entire feed) from decoding. Keep this tolerance local to length.
+    if let value = try? container.decodeIfPresent(Int64.self, forKey: .length) {
+      length = value >= 0 ? value : nil
+    } else if let text = try? container.decodeIfPresent(String.self, forKey: .length),
+              let value = Int64(text.trimmingCharacters(in: .whitespacesAndNewlines)),
+              value >= 0 {
+      length = value
+    } else {
+      length = nil
+    }
+  }
+
   // MARK: Public
 
   /// Where the enclosure is located.
@@ -45,6 +63,7 @@ public struct RSSFeedEnclosureAttributes: Codable, Equatable, Hashable, Sendable
   public var url: String?
 
   /// How big the media object is in bytes.
+  /// Missing, blank, invalid, negative, or overflowing values decode as `nil`.
   ///
   /// Example: 12216320
   public var length: Int64?
@@ -53,6 +72,10 @@ public struct RSSFeedEnclosureAttributes: Codable, Equatable, Hashable, Sendable
   ///
   /// Example: audio/mpeg
   public var type: String?
+
+  private enum CodingKeys: String, CodingKey {
+    case url, length, type
+  }
 }
 
 /// Describes a media object that is attached to the item.
