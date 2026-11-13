@@ -35,8 +35,9 @@ import Foundation
 ///
 /// An `inspectionPrefixLength` constant limits the
 /// number of bytes inspected when determining the feed type. This helps improve
-/// performance by only inspecting a small portion of the data (200 bytes), which
-/// is usually sufficient for detecting the feed format.
+/// performance by only inspecting a small portion of the data, which is usually
+/// sufficient for detecting the feed format. Payloads shorter than the limit are
+/// inspected in full.
 ///
 /// Example using `switch`:
 /// ```swift
@@ -84,7 +85,13 @@ public extension FeedType {
 }
 
 /// The number of bytes to inspect when determining the feed type.
-private let inspectionPrefixLength = 512
+///
+/// Detection only needs to reach the document's root element, but feeds may
+/// carry a prolog (an XML declaration, stylesheet processing instructions, and
+/// comments) before it. 1024 bytes covers the prologs seen so far; a longer one
+/// still hides the root element, which is the known limit of a fixed-size peek.
+/// See https://github.com/nmdias/FeedKit/issues/261.
+private let inspectionPrefixLength = 1024
 
 // MARK: - FeedInitializable
 
@@ -94,12 +101,9 @@ extension FeedType: FeedInitializable {
   /// - Parameter data: A `Data` object representing a feed to be inspected.
   /// - Returns: A `FeedType` if the data matches a known feed format, otherwise `nil`.
   public init(data: Data) throws {
-    guard data.count >= inspectionPrefixLength else {
-      throw FeedError.unknownFeedFormat
-    }
-
-    // Inspect only the first `inspectionPrefixLength` bytes. This helps improve performance
-    // while still providing enough data to reliably detect the feed format.
+    // Inspect at most the first `inspectionPrefixLength` bytes, or the whole
+    // payload when it is shorter. This helps improve performance while still
+    // providing enough data to reliably detect the feed format.
     let string: String = .init(decoding: data.prefix(inspectionPrefixLength), as: UTF8.self)
 
     // Determine the feed type
